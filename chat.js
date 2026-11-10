@@ -28,15 +28,26 @@ function normalizeMessages(messages) {
 
 async function generateReply(messages) {
   const cleanMessages = normalizeMessages(messages);
-  const endpoint = process.env.AZURE_OPENAI_ENDPOINT?.trim().replace(/\/+$/, "");
+  const configuredEndpoint = process.env.AZURE_OPENAI_ENDPOINT?.trim() || "";
+  const endpointUrl = configuredEndpoint.match(/https?:\/\/[^\s"'`]+/i)?.[0];
+  const endpoint = (endpointUrl || configuredEndpoint)
+    .replace(/["'`]+$/, "")
+    .replace(/\/+$/, "");
   const model =
     process.env.AZURE_OPENAI_DEPLOYMENT?.trim() ||
     process.env.AZURE_OPENAI_MODEL?.trim();
   const apiKey = process.env.AZURE_OPENAI_API_KEY?.trim();
 
-  if (!endpoint || !model || !apiKey) {
+  let endpointProtocol;
+  try {
+    endpointProtocol = new URL(endpoint).protocol;
+  } catch {
+    endpointProtocol = "";
+  }
+
+  if (!endpoint || !["http:", "https:"].includes(endpointProtocol) || !model || !apiKey) {
     throw new ChatError(
-      "The chat service is not configured. Set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_MODEL (or AZURE_OPENAI_DEPLOYMENT), and AZURE_OPENAI_API_KEY.",
+      "The chat service is not configured. Set AZURE_OPENAI_ENDPOINT to a valid URL, AZURE_OPENAI_MODEL (or AZURE_OPENAI_DEPLOYMENT), and AZURE_OPENAI_API_KEY.",
       503
     );
   }
@@ -67,6 +78,12 @@ async function generateReply(messages) {
   }
 
   if (!response.ok) {
+    if (response.status === 404) {
+      throw new ChatError(
+        "Azure OpenAI resource or model deployment not found. Verify AZURE_OPENAI_ENDPOINT and that AZURE_OPENAI_MODEL (or AZURE_OPENAI_DEPLOYMENT) matches a deployed model.",
+        502
+      );
+    }
     throw new ChatError(data.error?.message || `Chat service error (${response.status})`, 502);
   }
 
