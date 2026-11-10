@@ -51,4 +51,6 @@ http
     res.writeHead(404);
     res.end("Not found");
   })
-  .listen(PORT, () => console.log(`Marketing bot running at http://localhost:${PORT}`));
+  .listen(PORT, function () {
+    console.log(`Marketing bot running at http://localhost:${this.address().port}`);
+  });

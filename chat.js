@@ -86,7 +86,7 @@ async function generateReply(messages) {
     }
     if (response.status === 401 || response.status === 403) {
       throw new ChatError(
-        "Azure OpenAI rejected the configured API key or endpoint. Update AZURE_OPENAI_API_KEY and verify AZURE_OPENAI_ENDPOINT in Vercel, then redeploy.",
+        "Azure OpenAI rejected the configured API key or endpoint. Verify AZURE_OPENAI_API_KEY and AZURE_OPENAI_ENDPOINT in the server environment.",
         502
       );
     }
